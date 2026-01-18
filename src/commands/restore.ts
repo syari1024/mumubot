@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { Command } from "../types/Command";
 import { BackupManager } from "../utils/backupManager";
 
@@ -23,37 +23,65 @@ export default {
 
       if (!backupFilename) {
         await interaction.editReply({
-          content: "❌ Backup filename is required",
+          embeds: [
+            new EmbedBuilder()
+              .setColor("Red")
+              .setTitle("❌ エラー")
+              .setDescription("バックアップファイル名が必要です"),
+          ],
         });
         return;
       }
 
       const backupManager = new BackupManager(containerName, backupDir);
-
-      // バックアップファイルが存在するか確認
       const backups = await backupManager.listBackups();
       const backup = backups.find((b) => b.filename === backupFilename);
 
       if (!backup) {
         await interaction.editReply({
-          content: `❌ Backup not found: ${backupFilename}`,
+          embeds: [
+            new EmbedBuilder()
+              .setColor("Red")
+              .setTitle("❌ バックアップが見つかりません")
+              .setDescription(`バックアップ: ${backupFilename}`),
+          ],
         });
         return;
       }
 
       await interaction.editReply({
-        content: `⏳ Restoring backup **${backupFilename}**... This may take a while.`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Yellow")
+            .setTitle("⏳ 復元中")
+            .setDescription(
+              `バックアップ **${backupFilename}** を復元しています。少々お待ちください。`,
+            ),
+        ],
       });
 
       await backupManager.restoreBackup(backupFilename);
 
       await interaction.editReply({
-        content: `✅ Backup restored successfully!\n\n**Filename**: ${backupFilename}\n**Size**: ${backup.size}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("✅ 復元成功")
+            .addFields(
+              { name: "ファイル名", value: backupFilename },
+              { name: "サイズ", value: backup.size },
+            ),
+        ],
       });
     } catch (error: any) {
       console.error("Error restoring backup:", error);
       await interaction.editReply({
-        content: `❌ Failed to restore backup: ${error.message}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("❌ 復元失敗")
+            .setDescription(error.message),
+        ],
       });
     }
   },

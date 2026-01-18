@@ -1,29 +1,20 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { Command } from "../types/Command";
 import { DockerManager } from "../utils/dockerManager";
 
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 
-/**
- * ログからオンラインプレイヤーを検出
- */
 function parseOnlinePlayers(logs: string): string[] {
-  // ログからプレイヤー参加・退出メッセージを抽出
-  // 例: "[INFO] Player1 joined the game"
-  // 例: "[INFO] Player1 left the game"
-
   const joinPattern = /\[.*?\]\s+(.+?)\s+joined\s+the\s+game/gi;
   const leavePattern = /\[.*?\]\s+(.+?)\s+left\s+the\s+game/gi;
 
   const onlinePlayers = new Set<string>();
 
-  // 参加ログから参加者を抽出
   let match;
   while ((match = joinPattern.exec(logs)) !== null) {
     onlinePlayers.add(match[1].trim());
   }
 
-  // 退出ログから退出者を削除
   while ((match = leavePattern.exec(logs)) !== null) {
     onlinePlayers.delete(match[1].trim());
   }
@@ -40,39 +31,58 @@ export default {
 
     try {
       const dockerManager = new DockerManager(containerName);
-
-      // サーバーの稼働状況を確認
       const isRunning = await dockerManager.isRunning();
 
       if (!isRunning) {
         await interaction.editReply({
-          content: "🔴 **Server Status**\nStatus: **Stopped**",
+          embeds: [
+            new EmbedBuilder()
+              .setColor("Red")
+              .setTitle("🔴 サーバーステータス")
+              .addFields({ name: "ステータス", value: "**停止中**" }),
+          ],
         });
         return;
       }
 
-      // ログからオンラインプレイヤーを取得
       const logs = await dockerManager.getLogs(500);
       const onlinePlayers = parseOnlinePlayers(logs);
 
-      const statusMessage = `
-🟢 **Server Status**
-Status: **Running**
-Online Players: **${onlinePlayers.length}**
-${
-  onlinePlayers.length > 0
-    ? `\nPlayers:\n${onlinePlayers.map((p) => `  • ${p}`).join("\n")}`
-    : "No players online"
-}
-      `.trim();
+      const embed = new EmbedBuilder()
+        .setColor("Green")
+        .setTitle("🟢 サーバーステータス")
+        .addFields(
+          { name: "ステータス", value: "**稼働中**" },
+          {
+            name: "オンラインプレイヤー",
+            value: `**${onlinePlayers.length}**`,
+          },
+        );
+
+      if (onlinePlayers.length > 0) {
+        embed.addFields({
+          name: "プレイヤー一覧",
+          value: onlinePlayers.map((p) => `• ${p}`).join("\n"),
+        });
+      } else {
+        embed.addFields({
+          name: "プレイヤー一覧",
+          value: "オンラインプレイヤーなし",
+        });
+      }
 
       await interaction.editReply({
-        content: statusMessage,
+        embeds: [embed],
       });
     } catch (error: any) {
       console.error("Error getting server status:", error);
       await interaction.editReply({
-        content: `❌ Failed to get server status: ${error.message}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("❌ ステータス取得失敗")
+            .setDescription(error.message),
+        ],
       });
     }
   },

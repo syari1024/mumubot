@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { Command } from "../types/Command";
 import { WhitelistManager } from "../utils/whitelistManager";
 import { DockerManager } from "../utils/dockerManager";
@@ -54,43 +54,58 @@ async function handleAdd(interaction: any) {
   const mcid = interaction.options.getString("mcid");
 
   try {
-    // ホワイトリストに追加（XUID はプレイヤーログイン時に自動で埋まる）
     const whitelistManager = new WhitelistManager(containerName, allowlistPath);
     await whitelistManager.addPlayer(mcid);
 
-    // サーバーが起動しているか確認
     const dockerManager = new DockerManager(containerName);
     const isRunning = await dockerManager.isRunning();
 
     if (isRunning) {
-      // allowlist reload を実行
       await dockerManager.executeServerCommand("allowlist reload");
-
-      // リロード完了を待つ
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // ログを確認して成功判定
       const logs = await dockerManager.getLogs(50);
       const reloadSuccess = logs.includes("Allowlist reloaded from file");
 
-      if (reloadSuccess) {
-        await interaction.editReply({
-          content: `✅ Player **${mcid}** added to whitelist and reloaded!`,
-        });
-      } else {
-        await interaction.editReply({
-          content: `✅ Player **${mcid}** added to whitelist, but reload failed. Please restart the server.`,
-        });
-      }
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(reloadSuccess ? "Green" : "Yellow")
+            .setTitle(
+              reloadSuccess
+                ? "✅ ホワイトリスト追加成功"
+                : "⚠️ ホワイトリスト追加完了",
+            )
+            .setDescription(`プレイヤー: **${mcid}**`)
+            .setFooter({
+              text: reloadSuccess
+                ? "ホワイトリストが反映されました"
+                : "リロードに失敗しました。サーバーを再起動してください",
+            }),
+        ],
+      });
     } else {
       await interaction.editReply({
-        content: `✅ Player **${mcid}** added to whitelist! (Server is offline, changes will take effect on next start)`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("✅ ホワイトリスト追加成功")
+            .setDescription(`プレイヤー: **${mcid}**`)
+            .setFooter({
+              text: "サーバーは停止中です。次回起動時に反映されます。",
+            }),
+        ],
       });
     }
   } catch (error: any) {
     console.error("Error adding player:", error);
     await interaction.editReply({
-      content: `❌ Failed to add player: ${error.message}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Red")
+          .setTitle("❌ プレイヤー追加失敗")
+          .setDescription(error.message),
+      ],
     });
   }
 }
@@ -104,39 +119,55 @@ async function handleRemove(interaction: any) {
     const whitelistManager = new WhitelistManager(containerName, allowlistPath);
     await whitelistManager.removePlayer(mcid);
 
-    // サーバーが起動しているか確認
     const dockerManager = new DockerManager(containerName);
     const isRunning = await dockerManager.isRunning();
 
     if (isRunning) {
-      // allowlist reload を実行
       await dockerManager.executeServerCommand("allowlist reload");
-
-      // リロード完了を待つ
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // ログを確認して成功判定
       const logs = await dockerManager.getLogs(50);
       const reloadSuccess = logs.includes("Allowlist reloaded from file");
 
-      if (reloadSuccess) {
-        await interaction.editReply({
-          content: `✅ Player **${mcid}** removed from whitelist and reloaded!`,
-        });
-      } else {
-        await interaction.editReply({
-          content: `✅ Player **${mcid}** removed from whitelist, but reload failed. Please restart the server.`,
-        });
-      }
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(reloadSuccess ? "Green" : "Yellow")
+            .setTitle(
+              reloadSuccess
+                ? "✅ ホワイトリスト削除成功"
+                : "⚠️ ホワイトリスト削除完了",
+            )
+            .setDescription(`プレイヤー: **${mcid}**`)
+            .setFooter({
+              text: reloadSuccess
+                ? "ホワイトリストが反映されました"
+                : "リロードに失敗しました。サーバーを再起動してください",
+            }),
+        ],
+      });
     } else {
       await interaction.editReply({
-        content: `✅ Player **${mcid}** removed from whitelist! (Server is offline, changes will take effect on next start)`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("✅ ホワイトリスト削除成功")
+            .setDescription(`プレイヤー: **${mcid}**`)
+            .setFooter({
+              text: "サーバーは停止中です。次回起動時に反映されます。",
+            }),
+        ],
       });
     }
   } catch (error: any) {
     console.error("Error removing player:", error);
     await interaction.editReply({
-      content: `❌ Failed to remove player: ${error.message}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Red")
+          .setTitle("❌ プレイヤー削除失敗")
+          .setDescription(error.message),
+      ],
     });
   }
 }
@@ -150,22 +181,38 @@ async function handleList(interaction: any) {
 
     if (players.length === 0) {
       await interaction.editReply({
-        content: "📋 **Whitelist**\nNo players in whitelist",
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Blue")
+            .setTitle("📋 ホワイトリスト")
+            .setDescription("ホワイトリストにプレイヤーがいません"),
+        ],
       });
       return;
     }
 
     const playerList = players
-      .map((p) => `• ${p.name}${p.xuid ? ` (XUID: ${p.xuid})` : " (pending)"}`)
+      .map((p) => `• ${p.name}${p.xuid ? ` (XUID: ${p.xuid})` : " (保留中)"}`)
       .join("\n");
 
     await interaction.editReply({
-      content: `📋 **Whitelist** (${players.length} players)\n\n${playerList}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Blue")
+          .setTitle("📋 ホワイトリスト")
+          .setDescription(`**${players.length}** 人のプレイヤー`)
+          .addFields({ name: "プレイヤー一覧", value: playerList }),
+      ],
     });
   } catch (error: any) {
     console.error("Error listing players:", error);
     await interaction.editReply({
-      content: `❌ Failed to list players: ${error.message}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Red")
+          .setTitle("❌ プレイヤー一覧取得失敗")
+          .setDescription(error.message),
+      ],
     });
   }
 }

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { Command } from "../types/Command";
 import { DockerManager } from "../utils/dockerManager";
 
@@ -14,24 +14,38 @@ export default {
     try {
       const dockerManager = new DockerManager(containerName);
 
-      // サーバーが起動しているか確認
       const isRunning = await dockerManager.isRunning();
       if (!isRunning) {
         await interaction.editReply({
-          content: "❌ The server is not running.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor("Yellow")
+              .setTitle("⚠️ サーバー停止")
+              .setDescription("サーバーは既に停止しています。"),
+          ],
         });
         return;
       }
 
-      // サーバーを停止（graceful shutdown）
       await dockerManager.stop();
       await interaction.editReply({
-        content: "✅ Server stopped successfully!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("🛑 サーバー停止")
+            .setDescription("サーバーが無事に停止しました")
+            .setFooter({ text: "Mumu-Server" }),
+        ],
       });
     } catch (error: any) {
       console.error("Error stopping server:", error);
       await interaction.editReply({
-        content: `❌ Failed to stop server: ${error.message}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("❌ サーバー停止失敗")
+            .setDescription(error.message),
+        ],
       });
     }
   },

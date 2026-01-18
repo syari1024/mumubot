@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { Command } from "../types/Command";
 import { BackupManager } from "../utils/backupManager";
 
@@ -16,18 +16,38 @@ export default {
       const backupManager = new BackupManager(containerName, backupDir);
 
       await interaction.editReply({
-        content: "⏳ Creating backup... This may take a while.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Yellow")
+            .setTitle("⏳ バックアップ作成中")
+            .setDescription(
+              "バックアップを作成しています。少々お待ちください。",
+            ),
+        ],
       });
 
       const backup = await backupManager.createBackup();
 
       await interaction.editReply({
-        content: `✅ Backup created successfully!\n\n**Filename**: ${backup.filename}\n**Size**: ${backup.size}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("✅ バックアップ作成成功")
+            .addFields(
+              { name: "ファイル名", value: backup.filename },
+              { name: "サイズ", value: backup.size },
+            ),
+        ],
       });
     } catch (error: any) {
       console.error("Error creating backup:", error);
       await interaction.editReply({
-        content: `❌ Failed to create backup: ${error.message}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("❌ バックアップ作成失敗")
+            .setDescription(error.message),
+        ],
       });
     }
   },
