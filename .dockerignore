@@ -1,0 +1,53 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Documentation
+README.md
+LICENSE
+CHANGELOG.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Test
+*.test.ts
+*.spec.ts
+coverage
+.nyc_output
+
+# OS
+Thumbs.db
+.AppleDouble
+.TemporaryItems
+
+# Project specific
+backups/
+minecraft-data/
+*.log

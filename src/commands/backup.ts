@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { Command } from "../types/Command";
 import { BackupManager } from "../utils/backupManager";
+import { DockerManager } from "../utils/dockerManager";
 
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 const backupDir = process.env.BACKUP_DIR || "./backups";
@@ -13,6 +14,24 @@ export default {
     await interaction.deferReply();
 
     try {
+      const dockerManager = new DockerManager(containerName);
+
+      // サーバーが起動しているか確認
+      const isRunning = await dockerManager.isRunning();
+      if (!isRunning) {
+        await interaction.editReply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor("Red")
+              .setTitle("❌ バックアップ作成失敗")
+              .setDescription(
+                "サーバーが起動していません。サーバーを起動してからバックアップを作成してください。",
+              ),
+          ],
+        });
+        return;
+      }
+
       const backupManager = new BackupManager(containerName, backupDir);
 
       await interaction.editReply({

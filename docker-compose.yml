@@ -1,20 +1,66 @@
-version: "3"
+version: "3.8"
 
 services:
-  bedrock:
+  # Discord Bot（Minecraftを操作するBot）
+  mumubot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mumubot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - CONTAINER_NAME=${CONTAINER_NAME}
+      - DATA_MOUNT_PATH=${DATA_MOUNT_PATH}
+      - BACKUP_DIR=${BACKUP_DIR}
+      - ALLOWLIST_PATH=${ALLOWLIST_PATH}
+    volumes:
+      # Docker APIアクセス（重要：これでMinecraftコンテナを操作）
+      - /var/run/docker.sock:/var/run/docker.sock
+      # バックアップディレクトリをマウント
+      - ${BACKUP_DIR}:${BACKUP_DIR}
+      # ホワイトリストファイルをマウント
+      - ${ALLOWLIST_PATH}:${ALLOWLIST_PATH}
+      # Minecraftデータディレクトリへのアクセス
+      - ${DATA_MOUNT_PATH}:${DATA_MOUNT_PATH}:ro
+    networks:
+      - minecraft-network
+    depends_on:
+      - minecraft-server
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Minecraft Bedrock Server
+  minecraft-server:
     image: itzg/minecraft-bedrock-server:latest
     container_name: mumu-server
     restart: unless-stopped
-
-    ports:
-      - "19132:19132/udp"
-
     environment:
       - EULA=TRUE
-      - SERVER_NAME=MumuServer
+      - SERVER_NAME=Mumu-Server
       - GAMEMODE=survival
       - DIFFICULTY=normal
-      - ONLINE_MODE=true
-
+      - MAX_PLAYERS=10
+      - VIEW_DISTANCE=32
+    ports:
+      - "19132:19132/udp"
     volumes:
-      - ./data:/data
+      # Minecraftデータ永続化
+      - ./data/minecraft:/data
+    networks:
+      - minecraft-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  minecraft-network:
+    driver: bridge

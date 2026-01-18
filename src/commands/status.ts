@@ -5,18 +5,30 @@ import { DockerManager } from "../utils/dockerManager";
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 
 function parseOnlinePlayers(logs: string): string[] {
-  const joinPattern = /\[.*?\]\s+(.+?)\s+joined\s+the\s+game/gi;
-  const leavePattern = /\[.*?\]\s+(.+?)\s+left\s+the\s+game/gi;
+  // Minecraft Bedrock のログフォーマット対応
+  // [YYYY-MM-DD HH:MM:SS:mmm INFO] Player connected: <name>, xuid: <xuid>
+  // [YYYY-MM-DD HH:MM:SS:mmm INFO] Player disconnected: <name>, xuid: <xuid>, pfid: <pfid>
+
+  const joinPattern = /Player connected:\s+(\w+),\s+xuid:/gi;
+  const leavePattern = /Player disconnected:\s+(\w+),\s+xuid:/gi;
 
   const onlinePlayers = new Set<string>();
 
+  // 接続ログをパース
   let match;
   while ((match = joinPattern.exec(logs)) !== null) {
-    onlinePlayers.add(match[1].trim());
+    const player = match[1].trim();
+    if (player && player.length > 0) {
+      onlinePlayers.add(player);
+    }
   }
 
+  // 切断ログをパース
   while ((match = leavePattern.exec(logs)) !== null) {
-    onlinePlayers.delete(match[1].trim());
+    const player = match[1].trim();
+    if (player && player.length > 0) {
+      onlinePlayers.delete(player);
+    }
   }
 
   return Array.from(onlinePlayers);
@@ -39,40 +51,19 @@ export default {
             new EmbedBuilder()
               .setColor("Red")
               .setTitle("🔴 サーバーステータス")
-              .addFields({ name: "ステータス", value: "**停止中**" }),
+              .setDescription("**停止中**"),
           ],
         });
         return;
       }
 
-      const logs = await dockerManager.getLogs(500);
-      const onlinePlayers = parseOnlinePlayers(logs);
-
-      const embed = new EmbedBuilder()
-        .setColor("Green")
-        .setTitle("🟢 サーバーステータス")
-        .addFields(
-          { name: "ステータス", value: "**稼働中**" },
-          {
-            name: "オンラインプレイヤー",
-            value: `**${onlinePlayers.length}**`,
-          },
-        );
-
-      if (onlinePlayers.length > 0) {
-        embed.addFields({
-          name: "プレイヤー一覧",
-          value: onlinePlayers.map((p) => `• ${p}`).join("\n"),
-        });
-      } else {
-        embed.addFields({
-          name: "プレイヤー一覧",
-          value: "オンラインプレイヤーなし",
-        });
-      }
-
       await interaction.editReply({
-        embeds: [embed],
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Green")
+            .setTitle("🟢 サーバーステータス")
+            .setDescription("**稼働中**"),
+        ],
       });
     } catch (error: any) {
       console.error("Error getting server status:", error);
