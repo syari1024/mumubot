@@ -6,8 +6,8 @@ import {
   Routes,
 } from "discord.js";
 import dotenv from "dotenv";
-import { loadCommands } from "./utils/commandLoader.js";
-import { Command } from "./types/Command.js";
+import { loadCommands } from "./utils/commandLoader";
+import { Command } from "./types/Command";
 
 dotenv.config();
 
@@ -43,7 +43,7 @@ client.on("interactionCreate", async (interaction) => {
   commands = await loadCommands();
 
   const commandsData = Array.from(commands.values()).map((cmd: any) =>
-    cmd.data.toJSON()
+    cmd.data.toJSON(),
   );
 
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN!);
@@ -53,9 +53,9 @@ client.on("interactionCreate", async (interaction) => {
     await rest.put(
       Routes.applicationGuildCommands(
         process.env.CLIENT_ID!,
-        process.env.GUILD_ID!
+        process.env.GUILD_ID!,
       ),
-      { body: commandsData }
+      { body: commandsData },
     );
     console.log("✅ スラッシュコマンドを登録しました");
   } catch (error) {
