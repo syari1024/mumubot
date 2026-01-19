@@ -1,8 +1,8 @@
 import { execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, statSync } from "fs";
 import { join } from "path";
-import { DockerManager } from "./dockerManager";
-import { GoogleDriveManager } from "./googleDriveManager";
+import { DockerManager } from "./dockerManager.js";
+import { GoogleDriveManager } from "./googleDriveManager.js";
 
 interface BackupInfo {
   filename: string;

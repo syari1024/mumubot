@@ -6,8 +6,8 @@ import {
   Routes,
 } from "discord.js";
 import dotenv from "dotenv";
-import { loadCommands } from "./utils/commandLoader";
-import { Command } from "./types/Command";
+import { loadCommands } from "./utils/commandLoader.js";
+import { Command } from "./types/Command.js";
 
 dotenv.config();
 

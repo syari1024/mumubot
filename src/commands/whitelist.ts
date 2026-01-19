@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { Command } from "../types/Command";
-import { WhitelistManager } from "../utils/whitelistManager";
-import { DockerManager } from "../utils/dockerManager";
+import { WhitelistManager } from "../utils/whitelistManager.js";
+import { DockerManager } from "../utils/dockerManager.js";
 
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 const allowlistPath = process.env.ALLOWLIST_PATH || "./allowlist.json";

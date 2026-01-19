@@ -1,6 +1,6 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { Command } from "../types/Command";
-import { DockerManager } from "../utils/dockerManager";
+import { Command } from "../types/Command.js";
+import { DockerManager } from "../utils/dockerManager.js";
 
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 

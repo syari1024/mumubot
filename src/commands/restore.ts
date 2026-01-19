@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { Command } from "../types/Command";
-import { BackupManager } from "../utils/backupManager";
+import { Command } from "../types/Command.js";
+import { BackupManager } from "../utils/backupManager.js";
 
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 const backupDir = process.env.BACKUP_DIR || "./backups";

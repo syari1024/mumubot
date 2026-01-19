@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
-import { DockerManager } from "./dockerManager";
+import { DockerManager } from "./dockerManager.js";
 
 interface WhitelistEntry {
   ignoresPlayerLimit: boolean;
