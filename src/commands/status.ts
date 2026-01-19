@@ -4,36 +4,6 @@ import { DockerManager } from "../utils/dockerManager";
 
 const containerName = process.env.CONTAINER_NAME || "minecraft-bedrock";
 
-function parseOnlinePlayers(logs: string): string[] {
-  // Minecraft Bedrock のログフォーマット対応
-  // [YYYY-MM-DD HH:MM:SS:mmm INFO] Player connected: <name>, xuid: <xuid>
-  // [YYYY-MM-DD HH:MM:SS:mmm INFO] Player disconnected: <name>, xuid: <xuid>, pfid: <pfid>
-
-  const joinPattern = /Player connected:\s+(\w+),\s+xuid:/gi;
-  const leavePattern = /Player disconnected:\s+(\w+),\s+xuid:/gi;
-
-  const onlinePlayers = new Set<string>();
-
-  // 接続ログをパース
-  let match;
-  while ((match = joinPattern.exec(logs)) !== null) {
-    const player = match[1].trim();
-    if (player && player.length > 0) {
-      onlinePlayers.add(player);
-    }
-  }
-
-  // 切断ログをパース
-  while ((match = leavePattern.exec(logs)) !== null) {
-    const player = match[1].trim();
-    if (player && player.length > 0) {
-      onlinePlayers.delete(player);
-    }
-  }
-
-  return Array.from(onlinePlayers);
-}
-
 export default {
   data: new SlashCommandBuilder()
     .setName("status")
