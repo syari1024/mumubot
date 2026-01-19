@@ -20,6 +20,7 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
+credentials
 
 # Build outputs
 dist
@@ -49,5 +50,5 @@ Thumbs.db
 
 # Project specific
 backups/
-minecraft-data/
+data/
 *.log

@@ -1,12 +1,15 @@
 import { execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, statSync } from "fs";
-import { join, basename } from "path";
+import { join } from "path";
 import { DockerManager } from "./dockerManager";
+import { GoogleDriveManager } from "./googleDriveManager";
 
 interface BackupInfo {
   filename: string;
   timestamp: string;
   size: string;
+  googleDriveId?: string;
+  googleDriveLink?: string;
 }
 
 /**
@@ -16,6 +19,7 @@ export class BackupManager {
   private dockerManager: DockerManager;
   private backupDir: string;
   private containerDataPath: string;
+  private googleDriveManager?: GoogleDriveManager;
 
   constructor(
     containerName: string,
@@ -29,6 +33,21 @@ export class BackupManager {
     // バックアップディレクトリが存在しなければ作成
     if (!existsSync(this.backupDir)) {
       mkdirSync(this.backupDir, { recursive: true });
+    }
+
+    // Google Drive マネージャーを初期化（環境変数がある場合）
+    const credentialsPath = process.env.GOOGLE_DRIVE_CREDENTIALS_PATH;
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+    if (credentialsPath && folderId) {
+      try {
+        this.googleDriveManager = new GoogleDriveManager(
+          credentialsPath,
+          folderId,
+        );
+      } catch (error: any) {
+        console.warn(`⚠️ Google Drive is not available: ${error.message}`);
+      }
     }
   }
 
@@ -48,7 +67,7 @@ export class BackupManager {
   }
 
   /**
-   * バックアップを作成（tar.gz 形式）
+   * バックアップを作成（ローカル + Google Drive）
    */
   async createBackup(): Promise<BackupInfo> {
     try {
@@ -74,11 +93,29 @@ export class BackupManager {
       const stats = statSync(backupPath);
       const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
 
-      return {
+      const backupInfo: BackupInfo = {
         filename: backupFilename,
         timestamp: timestamp,
         size: `${sizeInMB} MB`,
       };
+
+      // Google Drive にアップロード
+      if (this.googleDriveManager) {
+        try {
+          console.log(`📤 Uploading to Google Drive: ${backupFilename}`);
+          const fileId = await this.googleDriveManager.uploadFile(
+            backupPath,
+            backupFilename,
+          );
+          backupInfo.googleDriveId = fileId;
+          backupInfo.googleDriveLink = `https://drive.google.com/file/d/${fileId}/view`;
+        } catch (error: any) {
+          console.warn(`⚠️ Failed to upload to Google Drive: ${error.message}`);
+          // Google Drive のアップロードに失敗しても、ローカルバックアップは成功と見なす
+        }
+      }
+
+      return backupInfo;
     } catch (error: any) {
       throw new Error(`Failed to create backup: ${error.message}`);
     }
@@ -95,25 +132,14 @@ export class BackupManager {
       if (!existsSync(backupPath)) {
         throw new Error(`Backup file not found: ${backupFilename}`);
       }
-
       // サーバーを停止
       const isRunning = await this.dockerManager.isRunning();
       if (isRunning) {
         await this.dockerManager.stop();
         await new Promise((resolve) => setTimeout(resolve, 3000));
       }
-
       // ホストのマウントパスのデータをリセット
       const dataPath = process.env.DATA_MOUNT_PATH || "/minecraft-data";
-
-      // 既存のデータを削除（world フォルダなど）
-      try {
-        execSync(`rm -rf "${dataPath}"/*`, {
-          stdio: "inherit",
-        });
-      } catch (error) {
-        console.warn("Warning: Could not remove existing data");
-      }
 
       // バックアップを復元
       execSync(`tar -xzf "${backupPath}" -C "${dataPath}"`, {
@@ -142,7 +168,7 @@ export class BackupManager {
           const stats = statSync(filepath);
           const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
 
-          // ファイル名から タイムスタンプを抽出
+          // ファイル名からタイムスタンプを抽出
           const match = filename.match(/backup-(.+?)\.tar\.gz/);
           const timestamp = match ? match[1] : "unknown";
 
@@ -172,6 +198,8 @@ export class BackupManager {
       }
 
       execSync(`rm "${backupPath}"`);
+
+      console.log(`✅ Deleted local backup: ${backupFilename}`);
     } catch (error: any) {
       throw new Error(`Failed to delete backup: ${error.message}`);
     }

@@ -3,9 +3,7 @@ version: "3.8"
 services:
   # Discord Bot（Minecraftを操作するBot）
   mumubot:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: syari1024/mumubot:latest
     container_name: mumubot
     restart: unless-stopped
     environment:
@@ -17,6 +15,8 @@ services:
       - DATA_MOUNT_PATH=${DATA_MOUNT_PATH}
       - BACKUP_DIR=${BACKUP_DIR}
       - ALLOWLIST_PATH=${ALLOWLIST_PATH}
+      - GOOGLE_DRIVE_CREDENTIALS_PATH=${GOOGLE_DRIVE_CREDENTIALS_PATH}
+      - GOOGLE_DRIVE_FOLDER_ID=${GOOGLE_DRIVE_FOLDER_ID}
     volumes:
       # Docker APIアクセス（重要：これでMinecraftコンテナを操作）
       - /var/run/docker.sock:/var/run/docker.sock
@@ -39,7 +39,7 @@ services:
   # Minecraft Bedrock Server
   minecraft-server:
     image: itzg/minecraft-bedrock-server:latest
-    container_name: mumu-server
+    container_name: ${CONTAINER_NAME}
     restart: unless-stopped
     environment:
       - EULA=TRUE
